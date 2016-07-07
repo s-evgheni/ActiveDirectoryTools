@@ -24,19 +24,16 @@ public class RunApp {
         }
 
         verbose("Trying bind to ActiveDirectory");
-        LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
 
         System.out.println("Checking DN for test.user");
         UserDAO dao = new UserDAOImpl();
-        String dn = dao.getUserDN("test.user");
+        String sAMAccountName="test.user";
+        String dn = dao.getUserDN(sAMAccountName);
         System.out.println("... retrieved DN as: " + dn);
-
-        try {
-            verbose("Closing connection to AD");
-            ldapContext.close();
-        } catch (NamingException e) {
-            e.printStackTrace();
-            exit(1);
+        String newUserPassword = "P@ssw0rd!!!";
+        System.out.println("Changing "+ sAMAccountName +" password to: "+ newUserPassword);
+        if(dao.changePassword(sAMAccountName, newUserPassword)){
+            System.out.println("password change has been successful");
         }
     }
 
