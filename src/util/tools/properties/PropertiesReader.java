@@ -1,4 +1,4 @@
-package util.tools;
+package util.tools.properties;
 
 import java.util.Properties;
 

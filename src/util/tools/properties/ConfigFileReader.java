@@ -1,9 +1,7 @@
-package util.tools;
+package util.tools.properties;
 
 import org.apache.commons.lang.StringUtils;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
