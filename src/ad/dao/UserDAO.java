@@ -12,12 +12,22 @@ import java.util.List;
 public interface UserDAO {
 
     /**
-     * Changes password for specified user
+     * Resets password for specified user on behalf of the Domain Administrator account
      * @param userName - account username
-     * @param password - new password
+     * @param password - new password for specified user account
      * @return
      */
-    public boolean changePassword(String userName, String password);
+    public boolean resetUserPasswordAsAdmin(String userName, String password);
+
+
+    /**
+     * Allows currently binded user to change his own password
+     * @param userName - account username
+     * @param oldPassword - old user password for specified user account
+     * @param newPassword - new password for specified user account
+     * @return
+     */
+    public boolean changePassword(String userName, String oldPassword, String newPassword);
 
     /**
      * Searches for specified user and returns user's distinguishedName name

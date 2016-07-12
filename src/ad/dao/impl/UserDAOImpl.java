@@ -40,15 +40,43 @@ public class UserDAOImpl implements UserDAO {
     private static final int CHANGE_PASSWORD_NEXT_LOGON = -1;
 
     @Override
-    public boolean changePassword(String userName, String password) {
+    public boolean resetUserPasswordAsAdmin(String userName, String newPassword) {
         LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
 
         try {
             ModificationItem[] mods = new ModificationItem[1];
 
             mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
-                                           new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(password))
+                                           new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
                                           );
+            ldapContext.modifyAttributes(getUserCN(userName), mods);
+
+            return true;
+        }
+        catch(NameNotFoundException e) {
+            System.err.println("[ERROR] User not found!");
+            return false;
+        }
+        catch (Exception e) {
+            System.err.println("[ERROR] Something went wrong. See stacktrace details below");
+            System.err.println(e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean changePassword(String userName, String oldPassword, String newPassword) {
+        LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
+
+        try {
+            ModificationItem[] mods = new ModificationItem[2];
+
+            mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE,
+                                           new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(oldPassword)));
+
+            mods[1] = new ModificationItem(DirContext.ADD_ATTRIBUTE,
+                                           new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword)));
+
             ldapContext.modifyAttributes(getUserCN(userName), mods);
 
             return true;
