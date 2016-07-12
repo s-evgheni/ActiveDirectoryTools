@@ -1,8 +1,8 @@
 package ad.connection;
 
 import org.apache.commons.lang.StringUtils;
-import util.tools.ConfigFileReader;
-import util.tools.ConfigProperty;
+import util.tools.properties.ConfigFileReader;
+import util.tools.properties.ConfigProperty;
 
 import javax.naming.Context;
 import javax.naming.ldap.LdapContext;
@@ -11,11 +11,6 @@ import java.util.StringTokenizer;
 import javax.naming.NamingException;
 import javax.naming.ldap.InitialLdapContext;
 
-import javax.naming.directory.SearchControls;
-import javax.naming.NamingEnumeration;
-import javax.naming.directory.SearchResult;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.Attribute;
 
 import static java.lang.System.exit;
 /**
@@ -34,8 +29,17 @@ public class ActiveDirectoryFactoryConnection {
 
     private void init() {
         loadPropertiesFromFile();
+
+        //build username/password for LDAP bind
+        String userName = System.getProperty(ConfigProperty.AD_BIND_USERNAME)
+                + "@"
+                + properties.getProperty(ConfigProperty.AD_BASE_DN);
+
+        String userPassword = System.getProperty(ConfigProperty.AD_BIND_USER_PWD);
+
         initTrustStore();
-        bindToActiveDirectoryAsAdmin();
+
+        bindUserToActiveDirectory(userName, userPassword);
     }
 
     public static ActiveDirectoryFactoryConnection getInstance() {
@@ -64,7 +68,7 @@ public class ActiveDirectoryFactoryConnection {
         exit(1);
     }
 
-    private void bindToActiveDirectoryAsAdmin() {
+    private void bindUserToActiveDirectory(String userName, String userPassword) {
         if(properties != null) {
             LdapHost ldapHost = buildLdapHostFromApplicationProperties();
             if(ldapHost == null)
@@ -76,14 +80,7 @@ public class ActiveDirectoryFactoryConnection {
             if(connectionContext == null)
                 exit(1);
 
-            //bind user to context
-            String adminName = properties.getProperty(ConfigProperty.AD_ADMIN_NAME)
-                    + "@"
-                    + properties.getProperty(ConfigProperty.AD_BASE_DN);
-
-            String adminPassword = properties.getProperty(ConfigProperty.AD_ADMIN_PWD);
-
-            addUserToConnectionContext(connectionContext, adminName, adminPassword);
+            addUserToConnectionContext(connectionContext, userName, userPassword);
 
             try {
                 ldapContext = new InitialLdapContext(connectionContext, null);

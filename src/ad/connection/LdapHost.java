@@ -1,8 +1,8 @@
 package ad.connection;
 
-import util.tools.ConfigFileReader;
-import util.tools.ConfigProperty;
-import util.tools.PropertiesReader;
+import util.tools.properties.ConfigFileReader;
+import util.tools.properties.ConfigProperty;
+import util.tools.properties.PropertiesReader;
 
 import java.io.IOException;
 import java.net.InetAddress;
