@@ -95,8 +95,20 @@ public class UserDAOImpl implements UserDAO {
     }
 
     private byte[] encodePassword(String password) throws UnsupportedEncodingException {
-        String newQuotedPassword = "\"" + password + "\"";
-        return newQuotedPassword.getBytes("UTF-16LE");
+        String quotedPassword = "\"" + password + "\"";
+
+        byte [] encodedPassResult = quotedPassword.getBytes("UTF-16LE");
+
+        StringBuilder sb = new StringBuilder();
+
+        System.out.print("encodedPassResult: ");
+        for (int i = 0; i < encodedPassResult.length; i++) {
+            System.out.print(encodedPassResult[i] + " ");
+        }
+        System.out.println();
+        System.out.println("encodedPassResult as String: " + new String(encodedPassResult));
+
+        return encodedPassResult;
     }
 
     @Override
