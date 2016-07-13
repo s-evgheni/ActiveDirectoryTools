@@ -1,21 +1,11 @@
 package ad.dao.impl;
 
 import javax.naming.NameNotFoundException;
-import javax.naming.NameAlreadyBoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
-import javax.naming.directory.BasicAttribute;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.ModificationItem;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.BasicAttributes;
-import javax.naming.directory.SearchControls;
-import javax.naming.directory.SearchResult;
+import javax.naming.directory.*;
 import javax.naming.ldap.LdapContext;
 
-
-import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.List;
 
@@ -39,6 +29,30 @@ public class UserDAOImpl implements UserDAO {
     private static final int UF_NORMAL_ACCOUNT = 0x0200;
     private static final int CHANGE_PASSWORD_NEXT_LOGON = -1;
 
+
+    /*
+       There are two ways to modify the unicodePwd attribute.
+       resetUserPasswordAsAdmin method below is analogous to an administrator resetting a password for a user.
+       To do this, the client must have bound as an administrator a user who has sufficient rights to modify other users' passwords.
+       The modify request should contain a single replace operation with the new password enclosed in quotation marks and be Base64 encoded.
+       If the client has sufficient rights, this password becomes the new password regardless of what the old password was.
+       The change might take a few minutes to be applied @ AD server side. During this time user who's password has been changed will be able
+       to use his new and old password during bind/login operation.
+
+       IMPORTANT NOTE:
+       Successful password reset will trigger reset of the values defined in Default Domain Password Policy for that user.
+       If an administrator sets a password for a user and wants that user to change the administrator-defined password,
+       the administrator must add option 'User must change password at next logon'.
+       Otherwise, the user will not be able to change the password until the number of days specified in
+       'Minimum password age' attribute in the Policy.
+
+       Default value for minimum password Age on AD domain is usually set to 1 day.
+       Setting the number of days to 0 on minimum password change policy will allow
+       immediate password changes, which is not recommended.
+
+       Passwrod policies can be configured via Group Policy Management tool on MS AD Domain Server
+       For HOW TO on Group Policy Management see: https://www.youtube.com/watch?v=buZewCeg_cY
+    */
     @Override
     public boolean resetUserPasswordAsAdmin(String userName, String newPassword) {
         LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
@@ -53,16 +67,29 @@ public class UserDAOImpl implements UserDAO {
 
             return true;
         }
-        catch(NameNotFoundException e) {
-            System.err.println("[ERROR] User not found!");
+        catch(NamingException e) {
+            System.err.println("[ERROR] :" + e.getExplanation());
             return false;
         }
         catch (Exception e) {
             System.err.println("[ERROR] Something went wrong. See stacktrace details below");
-            System.err.println(e);
             return false;
         }
     }
+
+    /*
+        IMPORTANT NOTES:
+        There are two ways to modify the unicodePwd attribute.
+        changePassword method below is analogous to a typical user change-password operation.
+        In this case, the modify request must contain both a delete operation and an add operation.
+        The delete operation must contain the current password enclosed in quotation marks and be Base64 encoded as described in RFC 1521.'
+        The add operation must contain the new password enclosed in quotation marks and be Base64 encoded.
+        As with  resetUserPasswordAsAdmin method successful password change
+        will trigger reset of the values defined in Default Domain Password Policy for that user.
+        Subsequent attempts to change user password will cause exception similar to:
+        [LDAP: error code 19 - 0000052D: AtrErr: DSID-03191083, #1:
+	    0: 0000052D: DSID-03191083, problem 1005 (CONSTRAINT_ATT_TYPE), data 0, Att 9005a (unicodePwd)[]];
+    */
 
     @Override
     public boolean changePassword(String userName, String oldPassword, String newPassword) {
@@ -83,8 +110,8 @@ public class UserDAOImpl implements UserDAO {
 
             return true;
         }
-        catch(NameNotFoundException e) {
-            System.err.println("[ERROR] User not found!");
+        catch(NamingException e) {
+            System.err.println("[ERROR] :" + e.getExplanation());
             return false;
         }
         catch (Exception e) {
@@ -101,7 +128,7 @@ public class UserDAOImpl implements UserDAO {
 
         StringBuilder sb = new StringBuilder();
 
-        System.out.print("encodedPassResult: ");
+        System.out.print("encodedPassResult as byte[]: ");
         for (int i = 0; i < encodedPassResult.length; i++) {
             System.out.print(encodedPassResult[i] + " ");
         }
