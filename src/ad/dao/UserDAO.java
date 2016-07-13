@@ -15,9 +15,10 @@ public interface UserDAO {
      * Resets password for specified user on behalf of the Domain Administrator account
      * @param userName - account username
      * @param password - new password for specified user account
+     * @param changePasswordNextLogon - flag indicating if user will be required to change his/her password on next login
      * @return
      */
-    public boolean resetUserPasswordAsAdmin(String userName, String password);
+    public boolean resetUserPasswordAsAdmin(String userName, String password, boolean changePasswordNextLogon);
 
 
     /**

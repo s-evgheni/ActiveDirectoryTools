@@ -6,6 +6,8 @@ import javax.naming.NamingException;
 import javax.naming.directory.*;
 import javax.naming.ldap.LdapContext;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.List;
 
@@ -27,7 +29,7 @@ public class UserDAOImpl implements UserDAO {
 
     private static final int UF_PASSWORD_EXPIRED = 0x800000;
     private static final int UF_NORMAL_ACCOUNT = 0x0200;
-    private static final int CHANGE_PASSWORD_NEXT_LOGON = -1;
+    private static final int CHANGE_PASSWORD_NEXT_LOGON = 0;
 
 
     /*
@@ -52,9 +54,10 @@ public class UserDAOImpl implements UserDAO {
 
        Passwrod policies can be configured via Group Policy Management tool on MS AD Domain Server
        For HOW TO on Group Policy Management see: https://www.youtube.com/watch?v=buZewCeg_cY
+       For more info on Password policy see: https://technet.microsoft.com/en-us/library/hh994572(v=ws.11).aspx
     */
     @Override
-    public boolean resetUserPasswordAsAdmin(String userName, String newPassword) {
+    public boolean resetUserPasswordAsAdmin(String userName, String newPassword, boolean changePasswordNextLogon) {
         LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
 
         try {
@@ -63,7 +66,17 @@ public class UserDAOImpl implements UserDAO {
             mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
                                            new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
                                           );
+
+
+
             ldapContext.modifyAttributes(getUserCN(userName), mods);
+
+            if(changePasswordNextLogon) {
+                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
+                        new BasicAttribute(LdapAttributes.PWD_LAST_SET, Integer.toString(CHANGE_PASSWORD_NEXT_LOGON))
+                );
+                ldapContext.modifyAttributes(getUserCN(userName), mods);
+            }
 
             return true;
         }
@@ -72,7 +85,7 @@ public class UserDAOImpl implements UserDAO {
             return false;
         }
         catch (Exception e) {
-            System.err.println("[ERROR] Something went wrong. See stacktrace details below");
+            System.err.println("[ERROR] Something went wrong. Stacktrace: "+ Arrays.toString(e.getStackTrace()));
             return false;
         }
     }
@@ -232,6 +245,34 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public List<String> getMembersFromGroup(String groupName) {
+        LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
+
+        String returnedAtts[] = { "member" , "distinguishedName" };
+
+        try {
+            String searchFilter = "(&(objectClass=group)(cn="+groupName+"))";
+            SearchControls searchCtls = new SearchControls();
+            searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            searchCtls.setReturningAttributes(returnedAtts);
+            NamingEnumeration<SearchResult> answer = ldapContext.search("", searchFilter,searchCtls);
+
+            SearchResult sr = answer.nextElement();
+
+
+            int numberMembers = sr.getAttributes().get("member").size();
+
+            List<String> members = new ArrayList<String>();
+
+            for (int i = 0; i < numberMembers; i++) {
+                members.add((String) sr.getAttributes().get("member").get(i));
+            }
+
+            return members;
+
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return null;
     }
 }
