@@ -68,6 +68,8 @@ public class UserDAOImpl implements UserDAO {
     public boolean changePassword(String userName, String oldPassword, String newPassword) {
         LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
 
+        System.out.println("Trying to change "+ userName +" password from <"+ oldPassword + "> to <"+ newPassword+">");
+
         try {
             ModificationItem[] mods = new ModificationItem[2];
 

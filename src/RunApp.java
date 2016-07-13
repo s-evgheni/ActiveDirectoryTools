@@ -21,7 +21,7 @@ public class RunApp {
     static String adUser = "";            //user to be manipulated in AD
 
 
-    static Boolean adminMode;
+    static boolean adminMode;
 
     private static InputOutputDevice IO = streamDevice(System.in, System.out);
 
@@ -36,36 +36,33 @@ public class RunApp {
             exit(1);
         }
 
-        adminMode = true;
-
         try {
-            if(adminMode) {
-                adBindUser = askUserName("Enter Domain Admin user name");
-                adBindUserPwd = askPassword("Enter Domain Admin password");
-                adUser = askUserName("Enter sAMAccountName of the user which will be manipulated in AD");
-            }
-            else {
-                adBindUser = askUserName("Enter username");
-                adBindUserPwd = askPassword("Enter user password");
-                adUser = adBindUser;
-            }
+            adBindUser = askQuestion("Enter bind user name");
+            adBindUserPwd = askPassword("Enter bind user password");
+            adminMode = StringUtils.equalsIgnoreCase("y", askQuestion("Is bind user a domain administrator (Y/N)?"));
+            adUser = adminMode ? askQuestion("Enter sAMAccountName of the user which will be manipulated in AD") : adBindUser;
+
+            verbose("______________________________________________________________________");
+            verbose("Bind sAMAccountName of the user: " + adBindUser);
+            verbose("Bind user password: " + adBindUserPwd);
+            verbose("Bind user is domain admin: " + adminMode);
+            verbose("User which will be manipulated in AD: " + adUser);
+            verbose("______________________________________________________________________");
+
+            verbose("Saving bind user credentials as system properties");
             System.setProperty(ConfigProperty.AD_BIND_USERNAME, adBindUser);
             System.setProperty(ConfigProperty.AD_BIND_USER_PWD, adBindUserPwd);
-            verbose("______________________________________________________________________");
-            verbose("sAMAccountName of the bind user: " + adBindUser);
-            verbose("Bind user password: " + adBindUserPwd);
-            verbose("sAMAccountName of the user which will be manipulated in AD: " + adUser);
-            verbose("______________________________________________________________________");
         }
         catch (Exception e) {
             System.err.println("Error when parsing CLI arguments..: " + e.getMessage());
             exit(1);
         }
 
-
         String newUserPassword = "";
+
         try {
-            newUserPassword = askPasswordTwice("Enter new user password");
+            newUserPassword = askPasswordTwice("Enter new password for " + adUser);
+
             if(StringUtils.isBlank(newUserPassword) && newUserPassword.length()<=5) {
                 System.err.println("New password must be at least 6 characters long");
                 exit(1);
@@ -78,12 +75,10 @@ public class RunApp {
 
         System.out.println("Checking DN for " + adUser);
         UserDAO dao = new UserDAOImpl();
-        String sAMAccountName = adUser;
         String dn = dao.getUserDN(adUser);
         System.out.println("... retrieved DN as: " + dn);
-        System.out.println("Changing "+ sAMAccountName +" password to: "+ newUserPassword);
 
-        boolean result = adminMode ? dao.changePassword(adBindUser, adBindUserPwd, newUserPassword) : dao.resetUserPasswordAsAdmin(sAMAccountName, newUserPassword);
+        boolean result = adminMode ? dao.resetUserPasswordAsAdmin(adUser, newUserPassword) : dao.changePassword(adBindUser, adBindUserPwd, newUserPassword);
 
         if(result) {
             System.out.println("password change has been successful");
@@ -99,10 +94,10 @@ public class RunApp {
         }
     }
 
-    public static String askUserName(String usernamePrompt) throws Exception {
+    public static String askQuestion(String question) throws Exception {
         String username;
         if (IO != null) {
-            IO.printf(usernamePrompt + ": ");
+            IO.printf(question + ": ");
             username = IO.readLine();
         } else {
             throw new Exception();
@@ -113,7 +108,7 @@ public class RunApp {
     public static String askPassword(String passwordPrompt) throws Exception {
         String password;
         if (IO != null) {
-            IO.printf(passwordPrompt);
+            IO.printf(passwordPrompt + ": ");
             char[] pwd = IO.readPassword();
             password = String.valueOf(pwd);
         } else {
@@ -123,8 +118,8 @@ public class RunApp {
     }
 
     public static String askPasswordTwice(String passwordPrompt) throws Exception {
-        String newPassword = askPassword(passwordPrompt + ": ");
-        String newPasswordConfirm = askPassword(passwordPrompt + " again: ");
+        String newPassword = askPassword(passwordPrompt);
+        String newPasswordConfirm = askPassword(passwordPrompt + " again");
 
         if (newPassword.equals(newPasswordConfirm)) {
             verbose("passwords match, processing change ...");
