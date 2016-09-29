@@ -95,7 +95,7 @@ public class AppControlInterface {
                 dao.changePassword(adBindUser, adBindUserPwd, newUserPassword);
 
         if(result) {
-            System.out.println("password change has been successful");
+            System.out.println("password change has succeeded");
         }
         else {
             System.out.println("Failed to change password");

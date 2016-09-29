@@ -58,24 +58,37 @@ public class UserDAOImpl implements UserDAO {
     */
     @Override
     public boolean resetUserPasswordAsAdmin(String userName, String newPassword, boolean changePasswordNextLogon) {
+
         LdapContext ldapContext = ActiveDirectoryFactoryConnection.getInstance().getLdapContext();
+        ModificationItem[] mods;
+        final String userCN;
 
         try {
-            ModificationItem[] mods = new ModificationItem[1];
+            mods = new ModificationItem[1];
+            userCN =  getUserCN(userName);
 
-            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
-                                           new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
-                                          );
+            if(StringUtils.isBlank(userCN)){
+                return false;
+            }
+            /**
+             * Reset user password twice to the same one in order to expire original password immediately
+             * This is done in order to bypass Active directory NTLM network authentication behaviour described over here:
+             *                    https://support.microsoft.com/en-us/kb/906305
+             */
+            for(int passwordResetAttempts=0; passwordResetAttempts<2; passwordResetAttempts++) {
+                System.out.println("Password reset attempt :" + passwordResetAttempts);
+                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
+                        new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
+                );
 
-
-
-            ldapContext.modifyAttributes(getUserCN(userName), mods);
+                ldapContext.modifyAttributes(userCN, mods);
+            }
 
             if(changePasswordNextLogon) {
                 mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
                         new BasicAttribute(LdapAttributes.PWD_LAST_SET, Integer.toString(CHANGE_PASSWORD_NEXT_LOGON))
                 );
-                ldapContext.modifyAttributes(getUserCN(userName), mods);
+                ldapContext.modifyAttributes(userCN, mods);
             }
 
             return true;
