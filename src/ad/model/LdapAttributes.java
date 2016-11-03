@@ -32,4 +32,6 @@ public class LdapAttributes {
     public static final String ACCOUNT_EXPIRES = "accountExpires";
 
     public static final String DISTINGUISHED_NAME = "distinguishedName";
+
+    public static final String SUPPORTED_CONTROL = "supportedControl";
 }

@@ -3,20 +3,27 @@ package ad.dao.impl;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
-import javax.naming.directory.*;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.ModificationItem;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+import javax.naming.ldap.Control;
 import javax.naming.ldap.LdapContext;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import java.io.UnsupportedEncodingException;
-
 import ad.connection.ActiveDirectoryFactoryConnection;
 import ad.dao.UserDAO;
 import ad.model.ActiveDirectoryUser;
 import ad.model.LdapAttributes;
+import ad.model.PasswordHistoryControl;
 import org.apache.commons.lang.StringUtils;
 
 
@@ -80,6 +87,13 @@ public class UserDAOImpl implements UserDAO {
                 mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
                         new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
                 );
+
+                if(passwordResetAttempts == 0) {//enforce password history check on first reset
+                    ldapContext.setRequestControls(new Control[]{new PasswordHistoryControl()});
+                }
+                else {//remove password history enforcement on subsequent modifications
+                    ldapContext.setRequestControls(null);
+                }
 
                 ldapContext.modifyAttributes(userCN, mods);
             }
@@ -151,8 +165,6 @@ public class UserDAOImpl implements UserDAO {
         String quotedPassword = "\"" + password + "\"";
 
         byte [] encodedPassResult = quotedPassword.getBytes("UTF-16LE");
-
-        StringBuilder sb = new StringBuilder();
 
         System.out.print("encodedPassResult as byte[]: ");
         for (int i = 0; i < encodedPassResult.length; i++) {
@@ -289,3 +301,18 @@ public class UserDAOImpl implements UserDAO {
         return null;
     }
 }
+
+/**
+ * Reset user password twice to the same one in order to expire original password immediately
+ * This is done in order to bypass Active directory NTLM network authentication behaviour described over here:
+ *                    https://support.microsoft.com/en-us/kb/906305
+ *
+ */
+//            for(int passwordResetAttempts=0; passwordResetAttempts<2; passwordResetAttempts++) {
+//                System.out.println("Password reset attempt :" + passwordResetAttempts);
+//                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
+//                        new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
+//                );
+//
+//                ldapContext.modifyAttributes(userCN, mods);
+//            }

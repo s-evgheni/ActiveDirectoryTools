@@ -3,6 +3,7 @@ package ad.dao;
 import ad.model.ActiveDirectoryUser;
 
 import javax.naming.NameNotFoundException;
+import javax.naming.NamingEnumeration;
 import java.util.GregorianCalendar;
 import java.util.List;
 
@@ -127,4 +128,10 @@ public interface UserDAO {
      * @return
      */
     public List<String> getMembersFromGroup(String groupName);
+
+    /**
+     * Returns the values of all attributes in root directory server entry (DSE)*
+     * @return search results as a list of Search
+     */
+//    public NamingEnumeration getRootDSE();
 }
