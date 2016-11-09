@@ -84,16 +84,21 @@ public class UserDAOImpl implements UserDAO {
              */
             for(int passwordResetAttempts=0; passwordResetAttempts<2; passwordResetAttempts++) {
                 System.out.println("Password reset attempt :" + passwordResetAttempts);
+
+                if(passwordResetAttempts == 0) {
+                    /**
+                    *  Enforce password history check on first reset.
+                    *  Normally you would want to check if this control is supported on Active Directory server by extracting it's value from root DSE
+                    **/
+                    ldapContext.setRequestControls(new Control[]{new PasswordHistoryControl()});
+                }
+                else {//remove password history enforcement on subsequent MODIFY requests
+                    ldapContext.setRequestControls(null);
+                }
+
                 mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
                         new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
                 );
-
-                if(passwordResetAttempts == 0) {//enforce password history check on first reset
-                    ldapContext.setRequestControls(new Control[]{new PasswordHistoryControl()});
-                }
-                else {//remove password history enforcement on subsequent modifications
-                    ldapContext.setRequestControls(null);
-                }
 
                 ldapContext.modifyAttributes(userCN, mods);
             }
@@ -109,6 +114,9 @@ public class UserDAOImpl implements UserDAO {
         }
         catch(NamingException e) {
             System.err.println("[ERROR] :" + e.getExplanation());
+            if(StringUtils.containsIgnoreCase(e.getExplanation(),"LDAP: error code 53 - 0000052D"))
+                System.err.println("[ERROR CAUSE]: password policy constraint violation");
+
             return false;
         }
         catch (Exception e) {
@@ -301,18 +309,3 @@ public class UserDAOImpl implements UserDAO {
         return null;
     }
 }
-
-/**
- * Reset user password twice to the same one in order to expire original password immediately
- * This is done in order to bypass Active directory NTLM network authentication behaviour described over here:
- *                    https://support.microsoft.com/en-us/kb/906305
- *
- */
-//            for(int passwordResetAttempts=0; passwordResetAttempts<2; passwordResetAttempts++) {
-//                System.out.println("Password reset attempt :" + passwordResetAttempts);
-//                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
-//                        new BasicAttribute(LdapAttributes.UNICODE_PWD, encodePassword(newPassword))
-//                );
-//
-//                ldapContext.modifyAttributes(userCN, mods);
-//            }
