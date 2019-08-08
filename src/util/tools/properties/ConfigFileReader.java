@@ -13,8 +13,6 @@ import static java.lang.System.exit;
  */
 public class ConfigFileReader implements PropertiesReader {
 
-    public final static String LOGON_CONFIGURATION_SYSTEM_PROPERTY = "pwc.logon.main.configuration.file";
-
     private static Properties toolProperties;
 
     public ConfigFileReader() {
